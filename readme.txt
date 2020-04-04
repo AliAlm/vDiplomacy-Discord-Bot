@@ -1,4 +1,7 @@
 A vDiplomacy Discord bot that reminds you when you need to submit orders.
+
+It scrapes the game page and determines how much time is left on the turn, and who has already submitted orders or pressed 'ready'
+
 In order for it to work, create a file named .env formatted like this:
 
 DISCORD_TOKEN=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
