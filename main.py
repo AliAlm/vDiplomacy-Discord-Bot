@@ -104,7 +104,6 @@ def get_daily_message(all_ready=False):
     if non_submit_countries:
         daily_message = daily_message + "\nPlayers who haven't submitted:\n\n"
         for name in non_submit_countries:
-            print(name)
             daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
     if non_ready_countries:
         daily_message = daily_message + f"\nPlayers who haven't clicked ready:\n "
