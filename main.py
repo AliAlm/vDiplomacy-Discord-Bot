@@ -8,6 +8,29 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL = int(os.getenv('DISCORD_CHANNEL'))
 
+# Player Names
+PLAYER1 = os.getenv("PLAYER1")
+PLAYER2 = os.getenv("PLAYER2")
+PLAYER3 = os.getenv("PLAYER3")
+PLAYER4 = os.getenv("PLAYER4")
+PLAYER5 = os.getenv("PLAYER5")
+PLAYER6 = os.getenv("PLAYER6")
+
+# IDs to names used for mentions
+PLAYER1_ID = os.getenv('PLAYER1_ID')
+PLAYER2_ID = os.getenv('PLAYER2_ID')
+PLAYER3_ID = os.getenv('PLAYER3_ID')
+PLAYER4_ID = os.getenv('PLAYER4_ID')
+PLAYER5_ID = os.getenv('PLAYER5_ID')
+PLAYER6_ID = os.getenv('PLAYER6_ID')
+
+# Country Names (needed to link player name to country)
+COUNTRY1 = os.getenv('COUNTRY1')
+COUNTRY2 = os.getenv('COUNTRY2')
+COUNTRY3 = os.getenv('COUNTRY3')
+COUNTRY4 = os.getenv('COUNTRY4')
+COUNTRY5 = os.getenv('COUNTRY5')
+COUNTRY6 = os.getenv('COUNTRY6')
 
 # Clock
 HOUR = 3600
@@ -35,6 +58,7 @@ def get_nonsubmit():
         q = country_num['class']
         non_submit_countries.append(players_to_country_ns[f'{q}'])
     return non_submit_countries
+
 
 def get_nonready():
     # Get list of players that haven't clicked ready (by checking icon title)
@@ -80,17 +104,18 @@ def get_daily_message(all_ready=False):
     if non_submit_countries:
         daily_message = daily_message + "\nPlayers who haven't submitted:\n\n"
         for name in non_submit_countries:
-            daily_message = daily_message + ("\t - " + names[f"{name}"] + "\n")
+            print(name)
+            daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
     if non_ready_countries:
         daily_message = daily_message + f"\nPlayers who haven't clicked ready:\n "
         for name in non_ready_countries:
-            daily_message = daily_message + ("\t - " + names[f"{name}"] + "\n")
+            daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
 
     if all_ready:
         daily_message = f"Hello! Everyone has submitted orders, but not all players are ready.\n Orders due in {time_remaining_hour} hours. "
         daily_message = daily_message + "\nPlayers who haven't clicked ready:\n\n"
         for name in non_ready_countries:
-            daily_message = daily_message + ("\t - " + names[f"{name}"] + "\n")
+            daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
 
     daily_message = daily_message + "\nhttps://vdiplomacy.com/board.php?gameID=41931"
     return daily_message
@@ -108,26 +133,17 @@ def players_to_country():
         'country6  memberStatusPlaying': player_tree.xpath('//span[@class="country6  memberStatusPlaying"]/text()')}
     return players_to_country
 
-
-# IDs to names used for mentions
-shiv_id = os.getenv('SHIV_ID')
-aidan_id = os.getenv('AIDAN_ID')
-bred_id = os.getenv('BRED_ID')
-reuben_id = os.getenv('REUBEN_ID')
-dan_id = os.getenv('DAN_ID')
-ali_id = os.getenv('ALI_ID')
-
 # Channel ID
 channel_id = CHANNEL
 
 # Create dictionary linking person's Discord ID/name with player
 names = {
-    "['Athens']": f"Shiv {shiv_id}",
-    "['Byzantium']": f"Aidan {aidan_id}",
-    "['Rhodes']": f"Bred {bred_id}",
-    "['Macedonia']": f"Reuben {reuben_id}",
-    "['Sparta']": f"Dan {dan_id}",
-    "['Persia']": f"Ali {ali_id}"
+    f"['{COUNTRY1}']": f"{PLAYER1} {PLAYER1_ID} - {COUNTRY1}",
+    f"['{COUNTRY2}']": f"{PLAYER2} {PLAYER2_ID} - {COUNTRY2}",
+    f"['{COUNTRY3}']": f"{PLAYER3} {PLAYER3_ID} - {COUNTRY3}",
+    f"['{COUNTRY4}']": f"{PLAYER4} {PLAYER4_ID} - {COUNTRY4}",
+    f"['{COUNTRY5}']": f"{PLAYER5} {PLAYER5_ID} - {COUNTRY5}",
+    f"['{COUNTRY6}']": f"{PLAYER6} {PLAYER6_ID} - {COUNTRY6}"
 
 }
 
