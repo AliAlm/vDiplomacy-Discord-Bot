@@ -159,7 +159,7 @@ async def run():
     print(f"{get_time()} hours till deadline.")
 
     if check_time():
-        print("Less than 3 hours remaining. Sending message and waiting an hour")
+        print("Less than 3 hours remaining. Sending message and waiting an hour.")
         await channel_run.send(get_daily_message())
         bot.timer_manager.create_timer("wait", HOUR)
     else:
@@ -168,7 +168,7 @@ async def run():
             await channel_run.send(get_daily_message(True))
         time_remaining_sec = HOUR * (get_time() - 3)
         time_remaining = get_time() - 3
-        print(f"More than 3 hours remaining. Waiting {time_remaining} hours and checking again")
+        print(f"More than 3 hours remaining. Waiting {time_remaining} hours and checking again.")
         bot.timer_manager.create_timer("wait", time_remaining_sec)
 
 
