@@ -80,29 +80,30 @@ def get_time():
     time_tree = get_page()
     time_remaining = time_tree.xpath('//span[@class="timeremaining"]/text()')
     time_remaining = time_remaining[0]
-
-    time_remaining = int(time_remaining[0:2])
+    if time_remaining[3:6] == "min":
+        print("Less than an hour remaining")
+        time_remaining = 1
+    else:
+        time_remaining = int(time_remaining[0:2])
 
     return time_remaining
 
 
-def check_time():
-    time_remaining_int = get_time()
+def check_time(time_remaining_int):
     if time_remaining_int <= 3:
         return True
     else:
         return False
 
 
-def get_daily_message(all_ready=False):
-    time_remaining_hour = get_time()
+def get_daily_message(time_remaining_hour, all_ready=False, final=False):
     non_submit_countries = get_nonsubmit()
     non_ready_countries = get_nonready()
 
     daily_message = f"Hello! Orders are due in {time_remaining_hour} hours."
 
     if non_submit_countries:
-        daily_message = daily_message + "\nPlayers who haven't submitted:\n\n"
+        daily_message = daily_message + "\nPlayers who haven't submitted:\n"
         for name in non_submit_countries:
             daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
     if non_ready_countries:
@@ -112,8 +113,13 @@ def get_daily_message(all_ready=False):
 
     if all_ready:
         daily_message = f"Hello! Everyone has submitted orders, but not all players are ready.\n Orders due in {time_remaining_hour} hours. "
-        daily_message = daily_message + "\nPlayers who haven't clicked ready:\n\n"
+        daily_message = daily_message + "\nPlayers who haven't clicked ready:\n"
         for name in non_ready_countries:
+            daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
+    if final:
+        daily_message = f"Hello! This is the final warning. Orders are due in {time_remaining_hour} hours."
+        daily_message = daily_message + "\nPlayers who haven't submitted:\n"
+        for name in non_submit_countries:
             daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
 
     daily_message = daily_message + "\nhttps://vdiplomacy.com/board.php?gameID=41931"
@@ -131,6 +137,7 @@ def players_to_country():
         'country5  memberStatusPlaying': player_tree.xpath('//span[@class="country5  memberStatusPlaying"]/text()'),
         'country6  memberStatusPlaying': player_tree.xpath('//span[@class="country6  memberStatusPlaying"]/text()')}
     return players_to_country
+
 
 # Channel ID
 channel_id = CHANNEL
@@ -154,21 +161,21 @@ bot.timer_manager = timers.TimerManager(bot)
 async def run():
     channel_run = bot.get_channel(channel_id)
     all_non_submit = get_nonsubmit()
-
+    time_remaining_run = get_time()
     print("Running: Checking hours remaining...")
-    print(f"{get_time()} hours till deadline.")
+    print(f"{time_remaining_run} hours till deadline.")
 
-    if check_time():
-        print("Less than 3 hours remaining. Sending message and waiting an hour.")
-        await channel_run.send(get_daily_message())
-        bot.timer_manager.create_timer("wait", HOUR)
+    if check_time(time_remaining_run):
+        print("Less than 3 hours remaining. Sending message.")
+        await channel_run.send(get_daily_message(time_remaining_run))
+        bot.timer_manager.create_timer(name="final", expires=3600)
     else:
         all_not_ready = get_nonready()
         if not all_non_submit and all_not_ready:
-            await channel_run.send(get_daily_message(True))
-        time_remaining_sec = HOUR * (get_time() - 3)
-        time_remaining = get_time() - 3
-        print(f"More than 3 hours remaining. Waiting {time_remaining} hours and checking again.")
+            await channel_run.send(get_daily_message(time_remaining_run, all_ready=True))
+        time_remaining_new = time_remaining_run - 2
+        time_remaining_sec = HOUR * time_remaining_new
+        print(f"More than 3 hours remaining. Waiting {time_remaining_new} hours and checking again.")
         bot.timer_manager.create_timer("wait", time_remaining_sec)
 
 
@@ -178,18 +185,34 @@ async def on_ready():
     await run()
 
 
+@bot.event
+async def on_wait():
+    print("Timer up, running again")
+    await run()
+
+
+@bot.event
+async def on_final():
+    print("Final Warning")
+    channel_final = bot.get_channel(channel_id)
+    time_remaining = get_time()
+    await channel_final.send(get_daily_message(time_remaining, final=True))
+    bot.timer_manager.create_timer("wait", (HOUR * 3))
+
+
 @bot.command()
 async def refresh(ctx):
     print("Refresh requested")
+    time_remaining = get_time()
     non_submit_countries = get_nonsubmit()
-    daily_message = get_daily_message()
+    daily_message = get_daily_message(time_remaining)
     if non_submit_countries:
         await ctx.send(daily_message)
 
 
-@bot.event
-async def on_wait():
-    print("Timer up, running again")
+@bot.command()
+async def rerun():
+    print("Rerunning")
     await run()
 
 
