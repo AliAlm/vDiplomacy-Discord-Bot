@@ -1,9 +1,9 @@
-import requests, os
+import requests, os, datetime
 from lxml import html
 from dotenv import load_dotenv
 from discord.ext import commands, timers
 
-# Load Token and Servername from .env
+# Load Token and Server name from .env
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL = int(os.getenv('DISCORD_CHANNEL'))
@@ -40,67 +40,86 @@ MINUTES = 60
 # Refresh page grab
 def get_page():
     # Grab page and parse to string
-    page = requests.get('https://vdiplomacy.com/board.php?gameID=41931')
-    get_tree = html.fromstring(page.content)
-    return get_tree
+    print("Grabbing page...")
+    page_string = requests.get('https://vdiplomacy.com/board.php?gameID=41931')
+    page_tree = html.fromstring(page_string.content)
+    return page_tree
 
 
-def get_nonsubmit():
+def get_non_submit(page_ns):
     # Get list of players that haven't submitted orders(by checking icon title)
-    tree_ns = get_page()
-    non_submit = tree_ns.xpath('//img[@title="No orders submitted!"]')
+    print("Getting list of players who haven't submitted.")
+    non_submit = page_ns.xpath('//img[@title="No orders submitted!"]')
     non_submit_countries = []
-    players_to_country_ns = players_to_country()
+    players_to_country_ns = players_to_country(page_ns)
     # Loop matches up non-submitters with their dictionary equivalent
     for child in non_submit:
         country = child.getparent().getparent()
         country_num = country[1].attrib
         q = country_num['class']
         non_submit_countries.append(players_to_country_ns[f'{q}'])
+    print(*non_submit_countries)
     return non_submit_countries
 
 
-def get_nonready():
+def get_non_ready(page_nr):
     # Get list of players that haven't clicked ready (by checking icon title)
-    tree_nr = get_page()
-    non_ready = tree_nr.xpath('//img[@title="Orders completed, but not ready for next turn"]')
+    print("Getting list of players who aren't ready.")
+    non_ready = page_nr.xpath('//img[@title="Orders completed, but not ready for next turn"]')
     non_ready_countries = []
-    players_to_country_nr = players_to_country()
+    players_to_country_nr = players_to_country(page_nr)
     # Loop matches up non-submitters with their dictionary equivalent
     for child in non_ready:
         country = child.getparent().getparent()
         country_num = country[1].attrib
         q = country_num['class']
         non_ready_countries.append(players_to_country_nr[f'{q}'])
+    if non_ready_countries:
+        print(*non_ready_countries)
     return non_ready_countries
 
 
 # Gets remaining time from page
-def get_time():
-    time_tree = get_page()
-    time_remaining = time_tree.xpath('//span[@class="timeremaining"]/text()')
-    time_remaining = time_remaining[0]
-    if time_remaining[3:6] == "min":
-        print("Less than an hour remaining")
-        time_remaining = 1
-    else:
-        time_remaining = int(time_remaining[0:2])
+def get_time(page_time):
+    print("Getting time remaining...")
 
-    return time_remaining
+    time_remaining_unix = page_time.xpath('//span[@class="timeremaining"]/@unixtime')
+    time_remaining_unix = int(time_remaining_unix[0])
+
+    current_time = datetime.datetime
+    current_time = current_time.utcnow()
+
+    deadline = datetime.datetime
+    deadline = deadline.utcfromtimestamp(time_remaining_unix)
+
+
+    seconds_left = deadline - current_time
+
+    hours_left = int(int(seconds_left.seconds) / HOUR)
+    minutes_left = int((int(seconds_left.seconds) % HOUR) / MINUTES)
+
+    print(f"There are {hours_left} hours and {minutes_left} minutes left.")
+
+    if minutes_left > 30:
+        hours_left += 1
+
+    return hours_left, minutes_left
 
 
 def check_time(time_remaining_int):
-    if time_remaining_int <= 3:
+    print("Checking time...")
+
+    if time_remaining_int < 3:
         return True
     else:
         return False
 
 
-def get_daily_message(time_remaining_hour, all_ready=False, final=False):
-    non_submit_countries = get_nonsubmit()
-    non_ready_countries = get_nonready()
+def get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hour, time_remaining_min, all_ready=False,
+                      final=False):
+    print("Getting daily message...")
 
-    daily_message = f"Hello! Orders are due in {time_remaining_hour} hours."
+    daily_message = f"Hello! Orders are due in {time_remaining_hour} hours and {time_remaining_min} minutes."
 
     if non_submit_countries:
         daily_message = daily_message + "\nPlayers who haven't submitted:\n"
@@ -123,19 +142,19 @@ def get_daily_message(time_remaining_hour, all_ready=False, final=False):
             daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
 
     daily_message = daily_message + "\nhttps://vdiplomacy.com/board.php?gameID=41931"
+    print(daily_message)
     return daily_message
 
 
-def players_to_country():
-    player_tree = get_page()
+def players_to_country(page_player):
     # Create dictionary linking player to country
     players_to_country = {
-        'country1  memberStatusPlaying': player_tree.xpath('//span[@class="country1  memberStatusPlaying"]/text()'),
-        'country2  memberStatusPlaying': player_tree.xpath('//span[@class="country2  memberStatusPlaying"]/text()'),
-        'country3  memberStatusPlaying': player_tree.xpath('//span[@class="country3  memberStatusPlaying"]/text()'),
-        'country4  memberStatusPlaying': player_tree.xpath('//span[@class="country4  memberStatusPlaying"]/text()'),
-        'country5  memberStatusPlaying': player_tree.xpath('//span[@class="country5  memberStatusPlaying"]/text()'),
-        'country6  memberStatusPlaying': player_tree.xpath('//span[@class="country6  memberStatusPlaying"]/text()')}
+        'country1  memberStatusPlaying': page_player.xpath('//span[@class="country1  memberStatusPlaying"]/text()'),
+        'country2  memberStatusPlaying': page_player.xpath('//span[@class="country2  memberStatusPlaying"]/text()'),
+        'country3  memberStatusPlaying': page_player.xpath('//span[@class="country3  memberStatusPlaying"]/text()'),
+        'country4  memberStatusPlaying': page_player.xpath('//span[@class="country4  memberStatusPlaying"]/text()'),
+        'country5  memberStatusPlaying': page_player.xpath('//span[@class="country5  memberStatusPlaying"]/text()'),
+        'country6  memberStatusPlaying': page_player.xpath('//span[@class="country6  memberStatusPlaying"]/text()')}
     return players_to_country
 
 
@@ -159,60 +178,74 @@ bot.timer_manager = timers.TimerManager(bot)
 
 
 async def run():
-    channel_run = bot.get_channel(channel_id)
-    all_non_submit = get_nonsubmit()
-    time_remaining_run = get_time()
-    print("Running: Checking hours remaining...")
-    print(f"{time_remaining_run} hours till deadline.")
+    print("Running...")
 
-    if check_time(time_remaining_run):
-        print("Less than 3 hours remaining. Sending message.")
-        await channel_run.send(get_daily_message(time_remaining_run))
-        bot.timer_manager.create_timer(name="final", expires=3600)
+    channel_run = bot.get_channel(channel_id)
+    page_run = get_page()
+    non_submit_countries = get_non_submit(page_run)
+    non_ready_countries = get_non_ready(page_run)
+    time_remaining_hr, time_remaining_min = get_time(page_run)
+
+    if check_time(time_remaining_hr):
+        print("Less than 3 hours remaining. Sending message.\n")
+
+        # await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min))
+        bot.timer_manager.create_timer(name="final", expires=(HOUR * 1.5))
     else:
-        all_not_ready = get_nonready()
-        if not all_non_submit and all_not_ready:
-            await channel_run.send(get_daily_message(time_remaining_run, all_ready=True))
-        time_remaining_new = time_remaining_run - 2
+        # if not non_submit_countries and non_ready_countries:
+        # await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_run, all_ready=True))
+        time_remaining_new = time_remaining_hr - 3
         time_remaining_sec = HOUR * time_remaining_new
-        print(f"More than 3 hours remaining. Waiting {time_remaining_new} hours and checking again.")
+        print(f"More than 3 hours remaining. Waiting {time_remaining_new} hours and checking again.\n")
         bot.timer_manager.create_timer("wait", time_remaining_sec)
 
 
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
+
     await run()
 
 
 @bot.event
 async def on_wait():
-    print("Timer up, running again")
+    print("Timer up, wait called, running again...")
+
     await run()
 
 
 @bot.event
 async def on_final():
-    print("Final Warning")
+    print("Timer up, final called...")
+
     channel_final = bot.get_channel(channel_id)
-    time_remaining = get_time()
-    await channel_final.send(get_daily_message(time_remaining, final=True))
+    page_final = get_page()
+    non_submit_countries = get_non_submit(page_final)
+    non_ready_countries = get_non_ready(page_final)
+    time_remaining_final_hr, time_remaining_final_min = get_time(page_final)
+
+    # await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr, time_remaining_final_min final=True))
+
     bot.timer_manager.create_timer("wait", (HOUR * 3))
 
 
 @bot.command()
 async def refresh(ctx):
-    print("Refresh requested")
-    time_remaining = get_time()
-    non_submit_countries = get_nonsubmit()
-    daily_message = get_daily_message(time_remaining)
-    if non_submit_countries:
+    print("\nRefresh requested")
+
+    page_refresh = get_page()
+    non_submit_countries = get_non_submit(page_refresh)
+    non_ready_countries = get_non_ready(page_refresh)
+    time_remaining_refresh_hr, time_remaining_refresh_min = get_time(page_refresh)
+
+    daily_message = get_daily_message(non_submit_countries, non_ready_countries, time_remaining_refresh_hr, time_remaining_refresh_min)
+    if non_submit_countries or non_ready_countries:
         await ctx.send(daily_message)
 
 
 @bot.command()
 async def rerun():
-    print("Rerunning")
+    print("\nRerunning")
     await run()
 
 
