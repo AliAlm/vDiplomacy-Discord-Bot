@@ -189,13 +189,13 @@ async def run():
     if check_time(time_remaining_hr):
         print("Less than 3 hours remaining. Sending message.\n")
 
-        # await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min))
-        bot.timer_manager.create_timer(name="final", expires=(HOUR * 1.5))
+        await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min))
+        bot.timer_manager.create_timer("final", 5400)
     else:
-        # if not non_submit_countries and non_ready_countries:
-        # await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_run, all_ready=True))
+        if not non_submit_countries and non_ready_countries:
+            await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr,time_remaining_min, all_ready=True))
         time_remaining_new = time_remaining_hr - 3
-        time_remaining_sec = HOUR * time_remaining_new
+        time_remaining_sec = int(3600 * time_remaining_new)
         print(f"More than 3 hours remaining. Waiting {time_remaining_new} hours and checking again.\n")
         bot.timer_manager.create_timer("wait", time_remaining_sec)
 
@@ -224,9 +224,9 @@ async def on_final():
     non_ready_countries = get_non_ready(page_final)
     time_remaining_final_hr, time_remaining_final_min = get_time(page_final)
 
-    # await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr, time_remaining_final_min final=True))
+    await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr, time_remaining_final_min, final=True))
 
-    bot.timer_manager.create_timer("wait", (HOUR * 3))
+    bot.timer_manager.create_timer("wait", 10800)
 
 
 @bot.command()
