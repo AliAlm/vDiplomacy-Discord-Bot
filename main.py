@@ -224,9 +224,9 @@ async def on_final():
     non_ready_countries = get_non_ready(page_final)
     time_remaining_final_hr, time_remaining_final_min = get_time(page_final)
 
-    await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr, time_remaining_final_min, final=True))
-
-    bot.timer_manager.create_timer("wait", 10800)
+    if check_time(time_remaining_final_hr):
+        await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr, time_remaining_final_min, final=True))
+        bot.timer_manager.create_timer("wait", 10800)
 
 
 @bot.command()
