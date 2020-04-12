@@ -92,16 +92,12 @@ def get_time(page_time):
     deadline = datetime.datetime
     deadline = deadline.utcfromtimestamp(time_remaining_unix)
 
-
     seconds_left = deadline - current_time
 
     hours_left = int(int(seconds_left.seconds) / HOUR)
     minutes_left = int((int(seconds_left.seconds) % HOUR) / MINUTES)
 
     print(f"There are {hours_left} hours and {minutes_left} minutes left.")
-
-    if minutes_left > 30:
-        hours_left += 1
 
     return hours_left, minutes_left
 
@@ -115,7 +111,8 @@ def check_time(time_remaining_int):
         return False
 
 
-def get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hour, time_remaining_min, all_ready=False,
+def get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hour, time_remaining_min,
+                      all_ready=False,
                       final=False):
     print("Getting daily message...")
 
@@ -189,11 +186,14 @@ async def run():
     if check_time(time_remaining_hr):
         print("Less than 3 hours remaining. Sending message.\n")
 
-        await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min))
+        await channel_run.send(
+            get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min))
         bot.timer_manager.create_timer("final", 5400)
     else:
         if not non_submit_countries and non_ready_countries:
-            await channel_run.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr,time_remaining_min, all_ready=True))
+            await channel_run.send(
+                get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min,
+                                  all_ready=True))
         time_remaining_new = time_remaining_hr - 3
         time_remaining_sec = int(3600 * time_remaining_new)
         print(f"More than 3 hours remaining. Waiting {time_remaining_new} hours and checking again.\n")
@@ -225,7 +225,8 @@ async def on_final():
     time_remaining_final_hr, time_remaining_final_min = get_time(page_final)
 
     if check_time(time_remaining_final_hr):
-        await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr, time_remaining_final_min, final=True))
+        await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr,
+                                                   time_remaining_final_min, final=True))
         bot.timer_manager.create_timer("wait", 10800)
 
 
@@ -238,7 +239,8 @@ async def refresh(ctx):
     non_ready_countries = get_non_ready(page_refresh)
     time_remaining_refresh_hr, time_remaining_refresh_min = get_time(page_refresh)
 
-    daily_message = get_daily_message(non_submit_countries, non_ready_countries, time_remaining_refresh_hr, time_remaining_refresh_min)
+    daily_message = get_daily_message(non_submit_countries, non_ready_countries, time_remaining_refresh_hr,
+                                      time_remaining_refresh_min)
     if non_submit_countries or non_ready_countries:
         await ctx.send(daily_message)
 
