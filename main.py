@@ -93,27 +93,28 @@ def get_time(page_time):
     deadline = deadline.utcfromtimestamp(time_remaining_unix)
 
     seconds_left = deadline - current_time
+    seconds_left = int(seconds_left.seconds)
 
-    hours_left = int(int(seconds_left.seconds) / HOUR)
-    minutes_left = int((int(seconds_left.seconds) % HOUR) / MINUTES)
+    hours_left = int(seconds_left / HOUR)
+    minutes_left = int((seconds_left % HOUR) / MINUTES)
 
-    print(f"There are {hours_left} hours and {minutes_left} minutes left.")
+    print(f"There are {hours_left} hours, {minutes_left} minutes left until the deadline.")
 
-    return hours_left, minutes_left
+    return hours_left, minutes_left, seconds_left
 
 
-def check_time(time_remaining_int):
+def check_time(seconds_remaining):
     print("Checking time...")
+    print(f"{seconds_remaining} seconds remaining...")
 
-    if time_remaining_int < 3:
+    if seconds_remaining < 10800:
         return True
     else:
         return False
 
 
 def get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hour, time_remaining_min,
-                      all_ready=False,
-                      final=False):
+                      final=False, all_ready=False):
     print("Getting daily message...")
 
     daily_message = f"Hello! Orders are due in {time_remaining_hour} hours and {time_remaining_min} minutes."
@@ -122,21 +123,28 @@ def get_daily_message(non_submit_countries, non_ready_countries, time_remaining_
         daily_message = daily_message + "\nPlayers who haven't submitted:\n"
         for name in non_submit_countries:
             daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
+
     if non_ready_countries:
         daily_message = daily_message + f"\nPlayers who haven't clicked ready:\n "
         for name in non_ready_countries:
             daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
 
     if all_ready:
-        daily_message = f"Hello! Everyone has submitted orders, but not all players are ready.\n Orders due in {time_remaining_hour} hours. "
+        daily_message = f"Hello! Everyone has submitted orders, but not all players are ready.\nOrders due in {time_remaining_hour} hours. "
         daily_message = daily_message + "\nPlayers who haven't clicked ready:\n"
         for name in non_ready_countries:
             daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
+
     if final:
         daily_message = f"Hello! This is the final warning. Orders are due in {time_remaining_hour} hours."
-        daily_message = daily_message + "\nPlayers who haven't submitted:\n"
-        for name in non_submit_countries:
-            daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
+        if non_submit_countries:
+            daily_message = daily_message + "\nPlayers who haven't submitted:\n"
+            for name in non_submit_countries:
+                daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
+        if non_ready_countries:
+            daily_message = daily_message + f"\nPlayers who haven't clicked ready:\n "
+            for name in non_ready_countries:
+                daily_message = daily_message + ("\t - " + names[f'{name}'] + "\n")
 
     daily_message = daily_message + "\nhttps://vdiplomacy.com/board.php?gameID=41931"
     print(daily_message)
@@ -181,23 +189,21 @@ async def run():
     page_run = get_page()
     non_submit_countries = get_non_submit(page_run)
     non_ready_countries = get_non_ready(page_run)
-    time_remaining_hr, time_remaining_min = get_time(page_run)
+    time_remaining_hr, time_remaining_min, time_remaining_sec = get_time(page_run)
 
-    if check_time(time_remaining_hr):
-        print("Less than 3 hours remaining. Sending message.\n")
-
+    if check_time(time_remaining_sec):
+        print("Less than 3 hours remaining. Sending final message.")
         await channel_run.send(
-            get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min))
-        bot.timer_manager.create_timer("final", 5400)
+            get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min,
+                              final=True))
+        bot.timer_manager.create_timer("wait", 10800)
+    elif non_ready_countries and not non_submit_countries:
+        await channel_run.send(
+            get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min, final=False, all_ready=True))
+        bot.timer_manager.create_timer("wait", 3600)
     else:
-        if not non_submit_countries and non_ready_countries:
-            await channel_run.send(
-                get_daily_message(non_submit_countries, non_ready_countries, time_remaining_hr, time_remaining_min,
-                                  all_ready=True))
-        time_remaining_new = time_remaining_hr - 3
-        time_remaining_sec = int(3600 * time_remaining_new)
-        print(f"More than 3 hours remaining. Waiting {time_remaining_new} hours and checking again.\n")
-        bot.timer_manager.create_timer("wait", time_remaining_sec)
+        print("More than 3 hours remaining. Waiting 2 hours and checking again")
+        bot.timer_manager.create_timer("wait", 7200)
 
 
 @bot.event
@@ -214,22 +220,6 @@ async def on_wait():
     await run()
 
 
-@bot.event
-async def on_final():
-    print("Timer up, final called...")
-
-    channel_final = bot.get_channel(channel_id)
-    page_final = get_page()
-    non_submit_countries = get_non_submit(page_final)
-    non_ready_countries = get_non_ready(page_final)
-    time_remaining_final_hr, time_remaining_final_min = get_time(page_final)
-
-    if check_time(time_remaining_final_hr):
-        await channel_final.send(get_daily_message(non_submit_countries, non_ready_countries, time_remaining_final_hr,
-                                                   time_remaining_final_min, final=True))
-        bot.timer_manager.create_timer("wait", 10800)
-
-
 @bot.command()
 async def refresh(ctx):
     print("\nRefresh requested")
@@ -237,18 +227,12 @@ async def refresh(ctx):
     page_refresh = get_page()
     non_submit_countries = get_non_submit(page_refresh)
     non_ready_countries = get_non_ready(page_refresh)
-    time_remaining_refresh_hr, time_remaining_refresh_min = get_time(page_refresh)
+    time_remaining_refresh_hr, time_remaining_refresh_min, time_remaining_refresh_sec = get_time(page_refresh)
 
     daily_message = get_daily_message(non_submit_countries, non_ready_countries, time_remaining_refresh_hr,
                                       time_remaining_refresh_min)
     if non_submit_countries or non_ready_countries:
         await ctx.send(daily_message)
-
-
-@bot.command()
-async def rerun():
-    print("\nRerunning")
-    await run()
 
 
 bot.run(TOKEN)
